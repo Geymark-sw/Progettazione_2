@@ -1,0 +1,73 @@
+# Importa le librerie necessarie
+from flask import Flask, request, jsonify  # Flask per creare l'app e jsonify per formattare la risposta in JSON
+import psycopg2                             # Libreria per connettersi a PostgreSQL
+
+# Crea l'app Flask
+app = Flask(__name__)
+
+# Configurazione della connessione al database
+DB_CONFIG = {
+    'host': 'localhost',     # Host del database
+    'port': '5432',          # Porta del database
+    'dbname': 'Accademia',   # Nome del database
+    'user': 'postgres',      # Nome utente del database
+    'password': 'postgres'   # Password del database
+}
+
+# Funzione per creare la connessione al database
+def get_db_connection():
+    try:
+        # Crea una connessione utilizzando le credenziali di configurazione
+        connection = psycopg2.connect(**DB_CONFIG)
+        return connection
+    except Exception as e:
+        # Restituisce l'errore in caso di fallimento
+        return str(e)
+
+# Rotta per eseguire query con parametro 'scelta' passato via URL
+@app.route('/query', methods=['GET'])
+def execute_query():
+    # Recupera il parametro 'scelta' dall'URL (es. ?scelta=1)
+    scelta = request.args.get('scelta')
+    if not scelta:
+        # Restituisce un errore se il parametro è mancante
+        return jsonify({"error": "Parametro 'scelta' mancante"}), 400
+
+    # Costruzione della query in base alla scelta dell'utente
+    query = ""
+    if scelta == "1":
+        query = "SELECT DISTINCT ass.tipo FROM Assenza ass"
+    elif scelta == "2":
+        query = "SELECT DISTINCT annop.giorno FROM AttivitaNonProgettuale annop WHERE annop.tipo = 'Didattica' ORDER BY annop.giorno ASC"
+    elif scelta == "3":
+        query = "SELECT wp.nome, wp.inizio, wp.fine FROM Wp wp JOIN Progetto pr ON pr.id = wp.progetto WHERE pr.nome = 'Pegasus'"
+    else:
+        # Restituisce errore se la scelta non è valida
+        return jsonify({"error": "Scelta non valida"}), 400
+
+    # Connessione al database
+    connection = get_db_connection()
+    if isinstance(connection, str):  # Controlla se è stato restituito un errore
+        return jsonify({"error": connection}), 500
+
+    cursor = connection.cursor()  # Crea un cursore per eseguire le query
+    try:
+        cursor.execute(query)  # Esegue la query
+        rows = cursor.fetchall()  # Recupera i risultati
+        columns = [desc[0] for desc in cursor.description]  # Estrae i nomi delle colonne
+        results = [dict(zip(columns, row)) for row in rows]  # Crea una lista di dizionari per ogni riga
+        return jsonify(results)  # Restituisce i risultati in formato JSON
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        cursor.close()  # Chiude il cursore
+        connection.close()  # Chiude la connessione al database
+
+# Rotta principale per confermare che il server è attivo
+@app.route('/')
+def home():
+    return "Benvenuto! Usa /query?scelta=1 per eseguire una query."
+
+# Avvia l'applicazione Flask
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)

@@ -1,0 +1,8 @@
+version: '3.9'
+services:
+  web:
+    build: .
+    ports:
+      - "5001:5432"  # Mappa la porta del container alla porta locale
+    environment:
+      - FLASK_ENV=development

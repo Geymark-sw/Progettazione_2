@@ -1,0 +1,18 @@
+# Usa un'immagine base di Python
+FROM python:3.9
+
+# Imposta la directory di lavoro
+WORKDIR /app
+
+# Copia il file dei requisiti e installa le dipendenze
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+# Copia il resto dei file del progetto
+COPY . .
+
+# Espone la porta 5000 per Flask
+EXPOSE 5001
+
+# Comando per avviare l'applicazione Flask
+CMD ["python", "dbApp.py"]
